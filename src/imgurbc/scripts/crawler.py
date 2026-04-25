@@ -17,6 +17,9 @@ from imgurbc.infrastructure.services.consumer.output_to_stream import (
 from imgurbc.infrastructure.services.consumer.store_as_local_file import (
     StoreAsLocalFileConsumer,
 )
+from imgurbc.infrastructure.services.consumer.upload_to_gcloud import (
+    UploadToGoogleCloudStorageConsumer,
+)
 from imgurbc.infrastructure.services.downloader.httpx_impl import (
     HttpxDownloader,
 )
@@ -43,6 +46,14 @@ class Args(pydantic.BaseModel):
     no_stdout: typing.Annotated[
         bool, pydantic.Field(False, validation_alias="no-stdout")
     ]
+    gcloud_storage_bucket_name: typing.Annotated[
+        str | None,
+        pydantic.Field(None, validation_alias="gcloud_storage_bucket_name"),
+    ]
+    gcloud_storage_bucket_location: typing.Annotated[
+        str,
+        pydantic.Field(None, validation_alias="gcloud_storage_bucket_location"),
+    ]
 
 
 def parse_args() -> typing.Mapping[str, typing.Any]:
@@ -56,6 +67,21 @@ def parse_args() -> typing.Mapping[str, typing.Any]:
         type=int,
         default=1,
         help="Delay between tries, in seconds",
+    )
+    parser.add_argument(
+        "--gcloud-storage-bucket-name",
+        type=str,
+        required=False,
+        help="Name of the Google Cloud Storage bucket",
+    )
+    parser.add_argument(
+        "--gcloud-storage-bucket-location",
+        type=str,
+        default="us-east1",
+        help=(
+            "Location of the Google Cloud Storage bucket. It's only used if "
+            "the provided bucket name does not exist."
+        ),
     )
     parser.add_argument(
         "-i", "--input", nargs="+", default=[], help="Input as strings"
@@ -90,6 +116,23 @@ async def main() -> None:
         )
     if not args.no_stdout:
         consumers.append(OutputToStreamConsumer(stream=sys.stdout))
+
+    gcloud_storage_bucket_name = args.gcloud_storage_bucket_name
+    if gcloud_storage_bucket_name is not None:
+        import google.cloud.storage
+        import google.api_core.exceptions
+
+        client = google.cloud.storage.Client()
+        bucket: google.cloud.storage.Bucket
+        try:
+            bucket = client.create_bucket(
+                gcloud_storage_bucket_name,
+                location=args.gcloud_storage_bucket_location,
+            )
+        except google.api_core.exceptions.Conflict:
+            bucket = client.get_bucket(gcloud_storage_bucket_name)
+        consumers.append(UploadToGoogleCloudStorageConsumer(bucket=bucket))
+
     consumer = CombinerConsumer(consumers=consumers)
 
     async with httpx.AsyncClient() as client:
