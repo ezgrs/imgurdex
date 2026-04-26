@@ -12,6 +12,8 @@ dependencies = [
     "aiopath (>=0.7.7,<0.8.0)",
     "pydantic (>=2.13.3,<3.0.0)",
     "google-cloud-storage (>=3.10.1,<4.0.0)",
+    "fastapi[standard] (>=0.136.1,<0.137.0)",
+    "uvicorn (>=0.46.0,<0.47.0)",
 ]
 
 [tool.poetry]
