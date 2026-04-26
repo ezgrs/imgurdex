@@ -43,9 +43,10 @@ def _create_consumer() -> Consumer:
 def create_app() -> fastapi.FastAPI:
     app = fastapi.FastAPI()
 
-    async def _fetch_image(
-        consumer: Consumer, imgur_id: str
-    ) -> fastapi.Response:
+    id_iterator = _create_id_iterator()
+    consumer = _create_consumer()
+
+    async def _fetch_image(imgur_id: str) -> fastapi.Response:
         async with httpx.AsyncClient() as client:
             downloader = HttpxDownloader(
                 client=client,
@@ -60,19 +61,13 @@ def create_app() -> fastapi.FastAPI:
             return fastapi.Response(status_code=http.client.OK)
 
     @app.post("/imgur/random")
-    async def fetch_random_imgur_image(
-        id_iterator: typing.Annotated[
-            IdIterator, fastapi.Depends(_create_id_iterator)
-        ],
-        consumer: typing.Annotated[Consumer, fastapi.Depends(_create_consumer)],
-    ) -> fastapi.Response:
-        return await _fetch_image(consumer, next(id_iterator))
+    async def fetch_random_imgur_image() -> fastapi.Response:
+        return await _fetch_image(next(id_iterator))
 
     @app.post("/imgur/{imgur_id}")
     async def fetch_imgur_image(
-        consumer: typing.Annotated[Consumer, fastapi.Depends(_create_consumer)],
         imgur_id: typing.Annotated[str, fastapi.Path()],
     ) -> fastapi.Response:
-        return await _fetch_image(consumer, imgur_id)
+        return await _fetch_image(imgur_id)
 
     return app
