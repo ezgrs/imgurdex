@@ -43,11 +43,5 @@ jobs:
             --project ${{ vars.GCP_PROJECT_ID }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars \
-                EMAIL_HOST=${{ vars.EMAIL_HOST }},\
-                EMAIL_PORT=${{ vars.EMAIL_PORT }},\
-                GCLOUD_STORAGE_BUCKET_NAME=${{ vars.GCP_STORAGE_BUCKET_NAME }},\
-                GCLOUD_STORAGE_BUCKET_LOCATION=${{ vars.GCP_STORAGE_BUCKET_REGION }} \
-            --set-secrets \
-                EMAIL_USERNAME=EMAIL_USERNAME:latest,\
-                EMAIL_PASSWORD=EMAIL_PASSWORD:latest
+            --set-env-vars EMAIL_HOST=${{ vars.EMAIL_HOST }},EMAIL_PORT=${{ vars.EMAIL_PORT }},GCLOUD_STORAGE_BUCKET_NAME=${{ vars.GCP_STORAGE_BUCKET_NAME }},GCLOUD_STORAGE_BUCKET_LOCATION=${{ vars.GCP_STORAGE_BUCKET_REGION }} \
+            --set-secrets EMAIL_USERNAME=EMAIL_USERNAME:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest
