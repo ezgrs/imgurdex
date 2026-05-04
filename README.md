@@ -94,48 +94,6 @@ cd imgur-brute-crawler
 poetry install
 ```
 
-3. If you don't plan to use Google Cloud Storage, skip to step 8.
-
-4. Check if you have the [Google Cloud SDK](https://docs.cloud.google.com/sdk/docs/install-sdk) installed:
-
-```shell
-gcloud --version
-```
-```no-lang
-Google Cloud SDK 565.0.0
-beta 2026.04.10
-bq 2.1.31
-core 2026.04.10
-gcloud-crc32c 1.0.0
-gsutil 5.3
-```
-
-5. Log in into your Google Cloud account:
-
-```shell
-gcloud auth login
-```
-
-This command will first open your browser to the sign-in page where you complete authentication.
-
-Then it'll show your current list of projects: choose which one you would like to use its Storage.
-
-> Running this will allow **you** to run `gcloud` commands from your terminal, finding your credentials automatically.
-
-6. Create your Application Default Credentials (ADC) file:
-
-```shell
-gcloud auth application-default login
-```
-
-> Running this will allow **your SDK library** to run the SDK code, finding your credentials automatically.
-
-7. If your project is not already set for some reason, you can do so by running:
-
-```shell
-gcloud config set project PROJECT_ID
-```
-
 ## Usage
 
 ### CLI
@@ -179,34 +137,91 @@ poetry run python -m imgurbc.scripts.crawler --gcloud-storage-bucket-name my-buc
 ```
 
 
-### Google Cloud
+## Google Cloud
 
-1. If you already have a service account, skip to step 3.
+### Setup
 
-2. Create a service account to upload the images to the specified bucket:
+1. Check if you have the [Google Cloud SDK](https://docs.cloud.google.com/sdk/docs/install-sdk) installed:
 
 ```shell
-gcloud iam service-accounts create SERVICE_ACCOUNT_NAME
+gcloud --version
+```
+```text
+Google Cloud SDK 565.0.0
+beta 2026.04.10
+bq 2.1.31
+core 2026.04.10
+gcloud-crc32c 1.0.0
+gsutil 5.3
 ```
 
-3. If your service account already has storage permissions, skip to step 5.
+2. Log in into your Google Cloud account:
 
-4. Give the service account permission to upload images to the bucket:
+```shell
+gcloud auth login
+```
+
+This command will first open your browser to the sign-in page where you complete authentication.
+
+Then it'll show your current list of projects: choose which one you would like to use its Storage.
+
+> Running this will allow **you** to run `gcloud` commands from your terminal, finding your credentials automatically.
+
+3. Create your Application Default Credentials (ADC) file:
+
+```shell
+gcloud auth application-default login
+```
+
+> Running this will allow **your SDK library** to run the SDK code, finding your credentials automatically.
+
+4. If your project is not already set for some reason, you can do so by running:
+
+```shell
+gcloud config set project PROJECT_ID
+```
+
+### Cloud Run service
+
+This section walks through setting up and deploying a function on Google Cloud Run so the crawler can be 
+executed on a schedule using Google Cloud Scheduler.
+
+Instead of running the crawler in a continuous loop on a dedicated server, this approach treats each run as
+a short-lived, stateless job. Cloud Scheduler triggers the function at regular intervals, and Cloud Run spins
+up just enough compute to handle that execution before scaling back down.
+
+1. Create a service account to manage the Storage:
+
+```shell
+gcloud iam service-accounts create crawler
+```
+```text
+Created service account [crawler].
+```
+
+Add the following roles:
+
+- `storage.admin` (gives full control over Cloud Storage buckets)
+
+For instance,
 
 ```shell
 gcloud projects add-iam-policy-binding PROJECT_ID
-  --member="serviceAccount:SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com"
+  --member="serviceAccount:crawler@PROJECT_ID.iam.gserviceaccount.com"
   --role="roles/storage.admin"
 ```
+```text
+Updated IAM policy for project [PROJECT_ID].
+```
 
-5. Deploy the API to Google Cloud Run:
+2. Deploy the API to Google Cloud Run:
 
 ```shell
 gcloud run deploy CLOUD_FUNCTION_NAME
   --source .
   --region us-east1
   --allow-unauthenticated
-  --service-account=SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com
+  --service-account=crawler@PROJECT_ID.iam.gserviceaccount.com
 ```
 
 This will deploy a FastAPI application with two endpoints:
@@ -215,7 +230,7 @@ This will deploy a FastAPI application with two endpoints:
   It also saves the Imgur image to Google Cloud Storage if the former.
 - `POST /imgur/random`, which generates a random Imgur ID and acts like calling the previous endpoint.
 
-### Google Cloud with GitHub
+#### Automatic deploy via GitHub
 
 Considering you have a GitHub repository `https://github.com/YOUR_GITHUB_USER/YOUR_REPO`,
 you can set up a service account to deploy the Cloud Run service whenever you do a push.
@@ -227,7 +242,7 @@ Check out the workflow file at _.github/workflows/cloud-run-deploy.yml_.
 ```shell
 gcloud services enable iamcredentials.googleapis.com
 ```
-```langnone
+```text
 Operation "operations/XXXX.X9-9999999999999-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" finished successfully.
 ```
 
@@ -238,7 +253,7 @@ gcloud iam workload-identity-pools create github-pool
   --location=global
   --display-name="GitHub Pool"
 ```
-```langnone
+```text
 Created workload identity pool [github-pool].
 ```
 
@@ -253,7 +268,7 @@ gcloud iam workload-identity-pools providers create-oidc github-provider
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
   --attribute-condition="assertion.repository=='YOUR_GITHUB_USER/YOUR_REPO'"
 ```
-```langnone
+```text
 Created workload identity pool provider [github-provider].
 ```
 
@@ -265,7 +280,7 @@ gcloud iam workload-identity-pools providers describe github-provider
   --workload-identity-pool=github-pool
   --format="value(name)"
 ```
-```langnone
+```text
 projects/9999999999999/locations/global/workloadIdentityPools/github-pool/providers/github-provider
 ```
 
@@ -276,11 +291,11 @@ The 13-digit string will be refered as the `PROJECT_NUMBER`.
 ```shell
 gcloud iam service-accounts create github-deployer
 ```
-```langnone
+```text
 Created service account [github-deployer].
 ```
 
-Add the following roles:
+Add the following roles (as explained in the previous section):
 
 - `run.admin` (gives full control over Cloud Run services)
 - `iam.serviceAccountUser` (allows GitHub to use a service account when deploying)
@@ -288,17 +303,6 @@ Add the following roles:
 - `cloudbuild.builds.editor` (allows Cloud Build to run builds)
 - `storage.objectAdmin` (gives full control over objects inside Cloud Storage buckets)
 - `storage.bucketViewer` (allows reading Cloud Storage bucket metadata)
-
-For instance,
-
-```shell
-gcloud projects add-iam-policy-binding PROJECT_ID
-  --member="serviceAccount:github-deployer@PROJECT_ID.iam.gserviceaccount.com"
-  --role="roles/ROLE_NAME"
-```
-```langnone
-Updated IAM policy for project [PROJECT_ID].
-```
 
 Also link the service account to the GitHub provider:
 
@@ -308,7 +312,6 @@ gcloud iam service-accounts add-iam-policy-binding
   --role="roles/iam.serviceAccountTokenCreator"
   --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/YOUR_GITHUB_USER/YOUR_REPO"
 ```
-```langnone
+```text
 Updated IAM policy for serviceAccount [github-deployer@PROJECT_ID.iam.gserviceaccount.com].
 ```
-
