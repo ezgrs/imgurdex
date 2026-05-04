@@ -1,7 +1,9 @@
+import os
 import random
 import typing
 import http.client
 
+import dotenv
 import fastapi
 import httpx
 import google.cloud.storage
@@ -9,6 +11,10 @@ import google.api_core.exceptions
 
 from imgurbc.domain.interfaces.consumer import Consumer
 from imgurbc.domain.interfaces.id_iterator import IdIterator
+from imgurbc.infrastructure.services.consumer.combiner import CombinerConsumer
+from imgurbc.infrastructure.services.consumer.send_email import (
+    SendEmailConsumer,
+)
 from imgurbc.infrastructure.services.consumer.upload_to_gcloud import (
     UploadToGoogleCloudStorageConsumer,
 )
@@ -27,7 +33,7 @@ def _create_id_iterator() -> IdIterator:
     return RandomIdIterator(rng=random.Random())
 
 
-def _create_consumer() -> Consumer:
+def _create_google_cloud_storage_consumer() -> Consumer:
     client = google.cloud.storage.Client()
     bucket: google.cloud.storage.Bucket
     try:
@@ -40,7 +46,27 @@ def _create_consumer() -> Consumer:
     return UploadToGoogleCloudStorageConsumer(bucket=bucket)
 
 
+def _create_email_consumer() -> Consumer:
+    return SendEmailConsumer(
+        host=os.environ["EMAIL_HOST"],
+        port=int(os.environ["EMAIL_PORT"]),
+        username=os.environ["EMAIL_USERNAME"],
+        password=os.environ["EMAIL_PASSWORD"],
+    )
+
+
+def _create_consumer() -> Consumer:
+    return CombinerConsumer(
+        consumers=[
+            # _create_google_cloud_storage_consumer(),
+            _create_email_consumer(),
+        ]
+    )
+
+
 def create_app() -> fastapi.FastAPI:
+    dotenv.load_dotenv()
+
     app = fastapi.FastAPI()
 
     id_iterator = _create_id_iterator()
