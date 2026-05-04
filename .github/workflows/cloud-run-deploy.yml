@@ -6,8 +6,8 @@ on:
       - main
     paths:
       - src/**
-      - .gcloudignore"
-      - poetry.lock"
+      - .gcloudignore
+      - poetry.lock
       - pyproject.toml
       - Procfile
 
