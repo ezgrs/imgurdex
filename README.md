@@ -373,3 +373,83 @@ gcloud run deploy CLOUD_FUNCTION_NAME
   --set-env-vars EMAIL_HOST=smtp.gmail.com,EMAIL_PORT=587,...
   --set-secrets EMAIL_USERNAME=EMAIL_USERNAME:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest
 ```
+
+#### Enabling authentication
+
+Right now, if the Cloud Run function is called by anyone in the internet, that person will be able to access
+it because of the `--allow-unauthenticated` parameter. To revoke it, it's possible to restrict access to a dedicated
+service account.
+
+1. Create a service account to run the scheduler:
+
+```shell
+gcloud iam service-accounts create cron-scheduler
+```
+```text
+Created service account [cron-scheduler].
+```
+
+2. Grant it permission to run that specific Cloud Run function:
+
+```shell
+gcloud run services add-iam-policy-binding CLOUD_FUNCTION_NAME
+  --region us-east1
+  --member="serviceAccount:cron-scheduler@PROJECT_ID.iam.gserviceaccount.com"
+  --role="roles/run.invoker"
+```
+```text
+Updated IAM policy for service [CLOUD_FUNCTION_NAME].
+```
+
+3. Query the Cloud Run canonical URL:
+
+```shell
+gcloud run services describe CLOUD_FUNCTION_NAME
+  --region us-east1
+  --format="value(status.url)"
+```
+
+The output text will be refered as the `CLOUD_FUNCTION_URL`. 
+
+4. Create a Cloud Scheduler job:
+
+```shell
+gcloud scheduler jobs create http croncrawl
+  --location us-east1
+  --schedule="* * * * *"
+  --http-method=POST
+  --uri="CLOUD_FUNCTION_URL/imgur/random"
+  --oidc-service-account-email="cron-scheduler@PROJECT_ID.iam.gserviceaccount.com"
+  --oidc-token-audience="CLOUD_FUNCTION_URL"
+  --headers="User-Agent=Google-Cloud-Scheduler"
+  --time-zone="XXXXX/XXXXX"
+```
+
+5. Remove the public access:
+
+```shell
+gcloud run services get-iam-policy CLOUD_FUNCTION_NAME --region us-east1
+```
+```text
+bindings:
+- members:
+  - allUsers
+  - serviceAccount:cron-scheduler@PROJECT_ID.iam.gserviceaccount.com
+  role: roles/run.invoker
+```
+
+```shell
+gcloud run services remove-iam-policy-binding CLOUD_FUNCTION_NAME
+  --region us-east1
+  --member="allUsers"
+  --role="roles/run.invoker"
+```
+```text
+Updated IAM policy for service [CLOUD_FUNCTION_NAME].
+bindings:
+- members:
+  - serviceAccount:cron-scheduler@PROJECT_ID.iam.gserviceaccount.com
+  role: roles/run.invoker
+```
+
+When the next `gcloud run deploy` runs, the `--allow-unauthenticated` flag now must be omitted.
