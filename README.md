@@ -190,7 +190,7 @@ Instead of running the crawler in a continuous loop on a dedicated server, this 
 a short-lived, stateless job. Cloud Scheduler triggers the function at regular intervals, and Cloud Run spins
 up just enough compute to handle that execution before scaling back down.
 
-1. Create a service account to manage the Storage:
+1. Create a service account to manage the Cloud Run service:
 
 ```shell
 gcloud iam service-accounts create crawler
@@ -314,4 +314,62 @@ gcloud iam service-accounts add-iam-policy-binding
 ```
 ```text
 Updated IAM policy for serviceAccount [github-deployer@PROJECT_ID.iam.gserviceaccount.com].
+```
+
+#### Integrate with Secret Manager
+
+Right now, you must upload a .env file for `os.environ` work correctly inside the code. This section will integrate
+with Secret Manager so that the Cloud Run service has no access to the secret variables.
+
+1. Enable the IAM Service Account Credentials API:
+
+```shell
+gcloud services enable secretmanager.googleapis.com
+```
+```text
+Operation "operations/XXXX.X9-9999999999999-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" finished successfully.
+```
+
+2. Save all the sensitive variables:
+
+```shell
+echo|set /p="SECRET_VALUE" > secret.txt
+gcloud secrets create SECRET_KEY --replication-policy="automatic" --data-file=secret.txt
+```
+```text
+Created version [1] of the secret [SECRET_KEY].
+```
+
+To update it later:
+
+```shell
+echo|set /p="NEW_SECRET_VALUE" > secret.txt
+gcloud secrets versions add SECRET_KEY --data-file=secret.txt
+```
+```text
+Created version [2] of the secret [SECRET_KEY].
+```
+
+3. Grant the Cloud Run service account manager acess to the variables (as defined below, `crawler`):
+
+```shell
+gcloud secrets add-iam-policy-binding SECRET_KEY
+    --member="serviceAccount:crawler@PROJECT_ID.iam.gserviceaccount.com"
+    --role="roles/secretmanager.secretAccessor"
+```
+```text
+Updated IAM policy for secret [SECRET_KEY].
+```
+
+When the `gcloud run deploy` command is now executed, the `--set-env-vars` and `--set-secrets` parameters
+need to be passed. No code change is required, since it'll be automatically injected into `os.environ`:
+
+```shell
+gcloud run deploy CLOUD_FUNCTION_NAME
+  --source .
+  --region us-east1
+  --allow-unauthenticated
+  --service-account=crawler@PROJECT_ID.iam.gserviceaccount.com
+  --set-env-vars EMAIL_HOST=smtp.gmail.com,EMAIL_PORT=587,...
+  --set-secrets EMAIL_USERNAME=EMAIL_USERNAME:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest
 ```
