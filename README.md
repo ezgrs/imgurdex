@@ -125,7 +125,7 @@ gcloud auth application-default login
 7. If your project is not already set for some reason, you can do so by running:
 
 ```shell
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project PROJECT_ID
 ```
 
 ## Usage
@@ -215,7 +215,7 @@ Check out the workflow file at _.github/workflows/cloud-run-deploy.yml_.
 1. Enable the IAM Service Account Credentials API:
 
 ```shell
-gcloud services enable iamcredentials.googleapis.com --project PROJECT_ID
+gcloud services enable iamcredentials.googleapis.com
 ```
 ```langnone
 Operation "operations/XXXX.X9-9999999999999-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" finished successfully.
@@ -225,7 +225,6 @@ Operation "operations/XXXX.X9-9999999999999-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 
 ```shell
 gcloud iam workload-identity-pools create github-pool
-  --project=PROJECT_ID
   --location=global
   --display-name="GitHub Pool"
 ```
@@ -237,7 +236,6 @@ Created workload identity pool [github-pool].
 
 ```shell
 gcloud iam workload-identity-pools providers create-oidc github-provider 
-  --project=PROJECT_ID
   --location=global 
   --workload-identity-pool=github-pool
   --display-name="GitHub Provider"
@@ -253,7 +251,6 @@ Created workload identity pool provider [github-provider].
 
 ```shell
 gcloud iam workload-identity-pools providers describe github-provider
-  --project=PROJECT_ID
   --location=global
   --workload-identity-pool=github-pool
   --format="value(name)"
@@ -298,7 +295,6 @@ Also link the service account to the GitHub provider:
 ```shell
 gcloud iam service-accounts add-iam-policy-binding
   github-deployer@PROJECT_ID.iam.gserviceaccount.com
-  --project=PROJECT_ID
   --role="roles/iam.serviceAccountTokenCreator"
   --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/YOUR_GITHUB_USER/YOUR_REPO"
 ```
