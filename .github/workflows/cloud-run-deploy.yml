@@ -17,14 +17,6 @@ jobs:
 
     environment: production
 
-    env:
-      EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-      EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-      EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-      GCLOUD_STORAGE_BUCKET_NAME: ${{ vars.GCP_STORAGE_BUCKET_NAME }}
-      GCLOUD_STORAGE_BUCKET_LOCATION: ${{ vars.GCP_STORAGE_BUCKET_REGION }}
-
     permissions:
       contents: read
       id-token: write
@@ -42,15 +34,6 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Add .env file
-        run: |
-          echo "EMAIL_HOST=$EMAIL_HOST" >> .env
-          echo "EMAIL_PORT=$EMAIL_PORT" >> .env
-          echo "EMAIL_USERNAME=$EMAIL_USERNAME" >> .env
-          echo "EMAIL_PASSWORD=$EMAIL_PASSWORD" >> .env
-          echo "GCLOUD_STORAGE_BUCKET_NAME=$GCLOUD_STORAGE_BUCKET_NAME" >> .env
-          echo "GCLOUD_STORAGE_BUCKET_LOCATION=$GCLOUD_STORAGE_BUCKET_LOCATION" >> .env
-
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ vars.GCP_CLOUD_RUN_SERVICE }} \
@@ -58,4 +41,12 @@ jobs:
             --region ${{ vars.GCP_REGION }} \
             --project ${{ vars.GCP_PROJECT_ID }} \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars \
+                EMAIL_HOST=${{ vars.EMAIL_HOST }},\
+                EMAIL_PORT=${{ vars.EMAIL_PORT }},\
+                GCLOUD_STORAGE_BUCKET_NAME=${{ vars.GCP_STORAGE_BUCKET_NAME }},\
+                GCLOUD_STORAGE_BUCKET_LOCATION=${{ vars.GCP_STORAGE_BUCKET_REGION }} \
+            --set-secrets \
+                EMAIL_USERNAME=EMAIL_USERNAME:latest,\
+                EMAIL_PASSWORD=EMAIL_PASSWORD:latest
