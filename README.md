@@ -186,24 +186,26 @@ gcloud iam service-accounts create SERVICE_ACCOUNT_NAME
 4. Give the service account permission to upload images to the bucket:
 
 ```shell
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding PROJECT_ID
+  --member="serviceAccount:SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com"
   --role="roles/storage.admin"
 ```
 
 5. Deploy the API to Google Cloud Run:
 
 ```shell
-gcloud run deploy CLOUD_FUNCTION_NAME \
-  --source . \
-  --region us-east1 \
-  --allow-unauthenticated \
+gcloud run deploy CLOUD_FUNCTION_NAME
+  --source .
+  --region us-east1
+  --allow-unauthenticated
   --service-account=SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com
 ```
 
-This will deploy a FastAPI application with a single endpoint, `POST /imgur`, which receives
-a `imgur_id` in its body and saves it to Google Cloud Storage if it exists. It always returns
-_200 OK_.
+This will deploy a FastAPI application with two endpoints:
+
+- `POST /imgur/{imgur_id}`, which returns _200 OK_ if the provided image ID exists in Imgur otherwise _404 Not Found_.
+  It also saves the Imgur image to Google Cloud Storage if the former.
+- `POST /imgur/random`, which generates a random Imgur ID and acts like calling the previous endpoint.
 
 ### Google Cloud with GitHub
 
