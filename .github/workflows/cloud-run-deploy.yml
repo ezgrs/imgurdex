@@ -2,7 +2,14 @@ name: Deploy to Cloud Run
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - src/**
+      - .gcloudignore"
+      - poetry.lock"
+      - pyproject.toml
+      - Procfile
 
 jobs:
   deploy:
