@@ -58,16 +58,24 @@ An abstract service responsible for providing a stream of IDs to crawl.
 
 > Implementations may include generating random IDs, reading from a file or from a in-memory iterator.
 
----
+```mermaid
+sequenceDiagram
+    participant It as IdIterator
+    participant D as Downloader
+    participant C as Consumer
 
-The general execution flow is:
+    loop Until iterator exhausted
+        It->>D: yield id
+        D->>D: download(id)
+        alt Resource exists
+            D->>C: consume_hit(resource)
+        else Resource missing
+            D->>C: consume_miss(id)
+        end
+    end
 
-1. `IdIterator` yields an `id`
-2. `Downloader.download(id)` is called
-3. If resource exists, `Consumer.consume_hit(resource)`
-4. If resource does not exist, `Consumer.consume_miss(id)`
-5. Repeat until iterator is exhausted
-6. Close iterator
+    It->>It: close()
+```
 
 ## Installation
 
