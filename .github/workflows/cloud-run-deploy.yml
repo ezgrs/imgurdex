@@ -35,6 +35,15 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Add .env file
+        run: |
+          echo "EMAIL_HOST=$EMAIL_HOST" >> .env
+          echo "EMAIL_PORT=$EMAIL_PORT" >> .env
+          echo "EMAIL_USERNAME=$EMAIL_USERNAME" >> .env
+          echo "EMAIL_PASSWORD=$EMAIL_PASSWORD" >> .env
+          echo "GCLOUD_STORAGE_BUCKET_NAME=$GCLOUD_STORAGE_BUCKET_NAME" >> .env
+          echo "GCLOUD_STORAGE_BUCKET_LOCATION=$GCLOUD_STORAGE_BUCKET_LOCATION" >> .env
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ vars.GCP_CLOUD_RUN_SERVICE }} \
