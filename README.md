@@ -230,7 +230,7 @@ This will deploy a FastAPI application with two endpoints:
   It also saves the Imgur image to Google Cloud Storage if the former.
 - `POST /imgur/random`, which generates a random Imgur ID and acts like calling the previous endpoint.
 
-#### Automatic deploy via GitHub
+#### Deploying automatically via GitHub
 
 Considering you have a GitHub repository `https://github.com/YOUR_GITHUB_USER/YOUR_REPO`,
 you can set up a service account to deploy the Cloud Run service whenever you do a push.
@@ -316,10 +316,10 @@ gcloud iam service-accounts add-iam-policy-binding
 Updated IAM policy for serviceAccount [github-deployer@PROJECT_ID.iam.gserviceaccount.com].
 ```
 
-#### Integrate with Secret Manager
+#### Integrating with Secret Manager
 
-Right now, you must upload a .env file for `os.environ` work correctly inside the code. This section will integrate
-with Secret Manager so that the Cloud Run service has no access to the secret variables.
+A .env file for `os.environ` must be uploaded to Cloud Run server to make the code run correctly. This section will integrate
+with Secret Manager so that the Cloud Run has no access to the secret variables.
 
 1. Enable the IAM Service Account Credentials API:
 
