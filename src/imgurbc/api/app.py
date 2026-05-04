@@ -25,24 +25,24 @@ from imgurbc.infrastructure.services.id_iterator.random_impl import (
     RandomIdIterator,
 )
 
-GCLOUD_STORAGE_BUCKET_NAME: typing.Final[str] = "imgurbc"
-GCLOUD_STORAGE_BUCKET_LOCATION: typing.Final[str] = "us-east1"
-
 
 def _create_id_iterator() -> IdIterator:
     return RandomIdIterator(rng=random.Random())
 
 
 def _create_google_cloud_storage_consumer() -> Consumer:
+    bucket_name = os.environ["GCLOUD_STORAGE_BUCKET_NAME"]
+    bucket_location = os.environ["GCLOUD_STORAGE_BUCKET_LOCATION"]
+
     client = google.cloud.storage.Client()
     bucket: google.cloud.storage.Bucket
     try:
         bucket = client.create_bucket(
-            GCLOUD_STORAGE_BUCKET_NAME,
-            location=GCLOUD_STORAGE_BUCKET_LOCATION,
+            bucket_name,
+            location=bucket_location,
         )
     except google.api_core.exceptions.Conflict:
-        bucket = client.get_bucket(GCLOUD_STORAGE_BUCKET_NAME)
+        bucket = client.get_bucket(bucket_name)
     return UploadToGoogleCloudStorageConsumer(bucket=bucket)
 
 
@@ -58,7 +58,7 @@ def _create_email_consumer() -> Consumer:
 def _create_consumer() -> Consumer:
     return CombinerConsumer(
         consumers=[
-            # _create_google_cloud_storage_consumer(),
+            _create_google_cloud_storage_consumer(),
             _create_email_consumer(),
         ]
     )
