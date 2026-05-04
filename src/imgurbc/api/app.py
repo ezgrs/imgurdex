@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import typing
@@ -55,22 +56,25 @@ def _create_email_consumer() -> Consumer:
     )
 
 
-def _create_consumer() -> Consumer:
+def _create_consumer(*, logger: logging.Logger) -> Consumer:
     return CombinerConsumer(
         consumers=[
             _create_google_cloud_storage_consumer(),
             _create_email_consumer(),
-        ]
+        ],
+        logger=logger,
     )
 
 
 def create_app() -> fastapi.FastAPI:
     dotenv.load_dotenv()
 
+    logger = logging.getLogger("uvicorn")
+
     app = fastapi.FastAPI()
 
     id_iterator = _create_id_iterator()
-    consumer = _create_consumer()
+    consumer = _create_consumer(logger=logger)
 
     async def _fetch_image(imgur_id: str) -> fastapi.Response:
         async with httpx.AsyncClient() as client:
