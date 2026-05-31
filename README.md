@@ -1,4 +1,4 @@
-# imgur-brute-crawler
+# imgurdex
 
 A lightweight asynchronous crawler that fetches resources from Imgur, processes them through a pluggable architecture, and stores results locally or in Google Cloud Storage.
 
@@ -84,8 +84,8 @@ It's recommended to have [Poetry](https://python-poetry.org) in your machine.
 1. Clone the repository:
 
 ```shell
-git clone https://github.com/ezgrs/imgur-brute-crawler
-cd imgur-brute-crawler
+git clone https://github.com/ezgrs/imgurdex
+cd imgurdex
 ```
 
 2. Install the dependencies:
